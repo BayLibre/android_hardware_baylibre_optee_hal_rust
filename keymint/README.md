@@ -39,6 +39,7 @@ KeyMint Rust TA (dba51a17-0563-11e7-93b1-6fa7b0071a51.ta)
 | Path | Description |
 |------|-------------|
 | `keymint/src/keymint_hal_main.rs` | HAL service |
+| `keymint/src/boot_info.rs` | Boot info sent to the TA at startup |
 | `keymint/Android.bp` | `android.hardware.security.keymint-service.optee.rust` |
 | `keymint/provisioning/src/main.rs` | Tool that provisions the attestation IDs in the TA, once per device |
 | `keymint/provisioning/Android.bp` | `keymint-optee-provision-ids` |
@@ -68,10 +69,15 @@ Trusty HAL), below the TA limit of 4096 bytes (`KEYMINT_MAX_BUFFER_LENGTH`).
 
 ## Startup Sequence
 
-Before registering the binder services, the HAL sends `SetHalInfo` and
-`SetHalVersion` (`kmr_hal::send_hal_info()`): the OS version and patch level and
-the vendor patch level, from the system properties, and the KeyMint AIDL
-version (4).
+Before registering the binder services, the HAL sends:
+
+1. `SetBootInfo` (`boot_info.rs`): the Root of Trust and the boot patch level,
+   from the properties set by the bootloader (`ro.boot.vbmeta.*`,
+   `ro.boot.verifiedbootstate`, `ro.vendor.boot_security_patch`). See
+   Limitations.
+2. `SetHalInfo` and `SetHalVersion` (`kmr_hal::send_hal_info()`): the OS version
+   and patch level and the vendor patch level, from the system properties, and
+   the KeyMint AIDL version (4).
 
 The HAL does not send the attestation IDs: the TA reads them from its secure
 storage.
@@ -148,17 +154,16 @@ VTS: `VtsAidlKeyMintTargetTest`, `VtsAidlSecureClockTargetTest`,
 - `libtee_optee_channel` (`vendor/baylibre/optee_ta_rust/optee_channel`) / `libteec`
   (`vendor/optee/optee_client`): OP-TEE Client API
 - `librustutils`: system properties
+- `libhex`: vbmeta digests of the boot info
 - Android Binder libraries
 
 ## Limitations
 
-1. **Boot info**: the HAL does not send the Root of Trust and the boot patch
-   level. The KeyMint TA expects them from the bootloader through a channel
-   that Android cannot subvert ("Bootloader" checklist of
-   `system/keymint/README.md`), which this device does not provide yet. Until
-   then, kmr-ta fails every key operation with `HARDWARE_NOT_YET_AVAILABLE`.
-   vold then cannot create or unwrap the metadata encryption key, so `/data`
-   is not mounted and the device does not boot.
+1. **Boot info**: the Root of Trust and the boot patch level come from
+   properties that Android can change, whereas the KeyMint TA expects them
+   from the bootloader through a channel that Android cannot subvert
+   ("Bootloader" checklist of `system/keymint/README.md`). `boot_info.rs` is
+   interim, until the TA gets them from the secure world.
 2. **Attestation IDs**: provisioning is not restricted to the factory: any
    process with access to `/dev/tee0` can provision a device that has no IDs
    yet. See the TA `README.md` for the storage limitations.
