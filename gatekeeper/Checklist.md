@@ -27,9 +27,10 @@ returns a response message (as bytes) or an error.
 
 **Checklist:**
 
-- [ ] Implementation of HAL service main executable.
-- [ ] SELinux policy for the HAL service.
-- [ ] init.rc configuration for the HAL service.
+- [x] Implementation of HAL service main executable.
+- [x] SELinux policy for the HAL service.
+  (`device/epam/aosp-xenvm-trout/sepolicy/vendor/hal_gatekeeper_optee.te`)
+- [x] init.rc configuration for the HAL service.
 - [ ] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
 
 The <a
