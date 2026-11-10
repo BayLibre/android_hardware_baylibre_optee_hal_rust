@@ -15,8 +15,12 @@
 // limitations under the License.
 
 //! This module implements the HAL service for KeyMint (Rust) with OP-TEE.
+
+mod boot_info;
+
 use kmr_hal::{
-    register_binder_services, send_hal_info, HalServiceError, SerializedChannel, ALL_HALS,
+    register_binder_services, send_boot_info, send_hal_info, HalServiceError, SerializedChannel,
+    ALL_HALS,
 };
 use log::{debug, error, info};
 use std::{
@@ -94,6 +98,13 @@ fn inner_main() -> Result<(), HalServiceError> {
         ))
     })?;
     let optee_channel = Arc::new(Mutex::new(OpteeChannel(connection)));
+
+    // Send the boot info to the TA. Interim: it comes from the bootloader
+    // properties, which Android can change (see boot_info.rs).
+    let boot_info = boot_info::get_boot_info();
+    debug!("Boot info: {boot_info:?}");
+    send_boot_info(optee_channel.lock().unwrap().deref_mut(), boot_info)
+        .map_err(|e| format!("Failed to send boot info: {e:?}"))?;
 
     // Send the HAL service information to the TA, before registering the
     // services, so that no key is created or used without it.

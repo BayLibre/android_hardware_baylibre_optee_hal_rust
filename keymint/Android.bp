@@ -25,6 +25,7 @@ rust_binary {
     rustlibs: [
         "libandroid_logger",
         "libbinder_rs",
+        "libhex",
         "libkmr_hal_v4",
         "libkmr_wire",
         "liblog_rust",
