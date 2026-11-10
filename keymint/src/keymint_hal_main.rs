@@ -1,5 +1,6 @@
 //
 // Copyright (C) 2022 The Android Open-Source Project
+// Copyright (C) 2026 BayLibre
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,70 +14,53 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This module implements the HAL service for Keymint (Rust) in Trusty.
-use clap::Parser;
+//! This module implements the HAL service for KeyMint (Rust) with OP-TEE.
 use kmr_hal::{
-    extract_rsp, register_binder_services, send_hal_info, HalServiceError, SerializedChannel,
-    ALL_HALS,
+    register_binder_services, send_hal_info, HalServiceError, SerializedChannel, ALL_HALS,
 };
-use log::{error, info};
+use log::{debug, error, info};
 use std::{
     ffi::CString,
     ops::DerefMut,
     panic,
     sync::{Arc, Mutex},
 };
-use trusty::DEFAULT_DEVICE;
 
-const TRUSTY_KEYMINT_RUST_SERVICE_NAME: &str = "com.android.trusty.keymint";
+/// UUID of the KeyMint Rust TA.
+const KEYMINT_TA_UUID: &str = "dba51a17-0563-11e7-93b1-6fa7b0071a51";
 
 static SERVICE_INSTANCE: &str = "default";
 
 #[derive(Debug)]
-struct TipcChannel(trusty::TipcChannel);
+struct OpteeChannel(tee_optee_channel::OpteeChannel);
 
-impl SerializedChannel for TipcChannel {
+impl SerializedChannel for OpteeChannel {
     const MAX_SIZE: usize = 4000;
     fn execute(&mut self, serialized_req: &[u8]) -> binder::Result<Vec<u8>> {
-        self.0.send(serialized_req).map_err(|e| {
+        debug!("OpteeChannel::execute: {} bytes request", serialized_req.len());
+        let rsp = self.0.execute(serialized_req).map_err(|e| {
+            error!("OpteeChannel::execute failed: {e}");
             binder::Status::new_exception(
                 binder::ExceptionCode::TRANSACTION_FAILED,
                 Some(
                     &CString::new(format!(
-                        "Failed to send the request via tipc channel because of {e:?}"
+                        "Failed to execute the request via the OP-TEE channel because of {e:?}"
                     ))
                     .unwrap(),
                 ),
             )
         })?;
-        let mut expect_more_msgs = true;
-        let mut full_rsp = Vec::new();
-        while expect_more_msgs {
-            let mut recv_buf = Vec::new();
-            self.0.recv(&mut recv_buf).map_err(|e| {
-                binder::Status::new_exception(
-                    binder::ExceptionCode::TRANSACTION_FAILED,
-                    Some(
-                        &CString::new(format!(
-                            "Failed to receive the response via tipc channel because of {e:?}"
-                        ))
-                        .unwrap(),
-                    ),
-                )
-            })?;
-            let current_rsp_content;
-            (expect_more_msgs, current_rsp_content) = extract_rsp(&recv_buf)?;
-            full_rsp.extend_from_slice(current_rsp_content);
-        }
-        Ok(full_rsp)
+        debug!("OpteeChannel::execute: {} bytes response", rsp.len());
+        Ok(rsp)
     }
 }
 
-#[derive(Parser, Debug)]
-struct Args {
-    /// Tipc device path
-    #[arg(short, long, default_value_t = DEFAULT_DEVICE.to_string())]
-    dev: String,
+/// Debug level on debuggable (eng, userdebug) builds, info level otherwise.
+fn log_level() -> log::LevelFilter {
+    match rustutils::android::system_properties::read_bool("ro.debuggable", false) {
+        Ok(true) => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Info,
+    }
 }
 
 fn main() {
@@ -86,12 +70,11 @@ fn main() {
 }
 
 fn inner_main() -> Result<(), HalServiceError> {
-    let args = Args::parse();
     // Initialize Android logging.
     android_logger::init_once(
         android_logger::Config::default()
-            .with_tag("keymint-hal-trusty")
-            .with_max_level(log::LevelFilter::Info)
+            .with_tag("keymint-hal-optee-rust")
+            .with_max_level(log_level())
             .with_log_buffer(android_logger::LogId::System),
     );
     // Redirect panic messages to logcat.
@@ -105,22 +88,19 @@ fn inner_main() -> Result<(), HalServiceError> {
     binder::ProcessState::start_thread_pool();
 
     // Create connection to the TA
-    let connection =
-        trusty::TipcChannel::connect(args.dev.as_str(), TRUSTY_KEYMINT_RUST_SERVICE_NAME).map_err(
-            |e| {
-                HalServiceError(format!(
-                    "Failed to connect to Trusty Keymint TA at {} because of {:?}.",
-                    args.dev, e
-                ))
-            },
-        )?;
-    let tipc_channel = Arc::new(Mutex::new(TipcChannel(connection)));
+    let connection = tee_optee_channel::OpteeChannel::new(KEYMINT_TA_UUID).map_err(|e| {
+        HalServiceError(format!(
+            "Failed to connect to the OP-TEE KeyMint TA {KEYMINT_TA_UUID} because of {e:?}."
+        ))
+    })?;
+    let optee_channel = Arc::new(Mutex::new(OpteeChannel(connection)));
 
-    register_binder_services(&tipc_channel, ALL_HALS, SERVICE_INSTANCE)?;
+    register_binder_services(&optee_channel, ALL_HALS, SERVICE_INSTANCE)?;
 
     // Send the HAL service information to the TA
-    send_hal_info(tipc_channel.lock().unwrap().deref_mut())
+    send_hal_info(optee_channel.lock().unwrap().deref_mut())
         .map_err(|e| format!("Failed to populate HAL info: {e:?}"))?;
+    debug!("HAL info sent to the TA");
 
     info!("Joining thread pool now.");
     binder::ProcessState::join_thread_pool();
