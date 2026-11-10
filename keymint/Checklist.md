@@ -31,9 +31,10 @@ requests to the TA as request/response pairs.
 
 **Checklist:**
 
-- [ ] Implementation of HAL service, which registers for all HAL services.
-- [ ] SELinux policy for the HAL service.
-- [ ] init.rc configuration for the HAL service.
+- [x] Implementation of HAL service, which registers for all HAL services.
+- [x] SELinux policy for the HAL service.
+  (`device/epam/aosp-xenvm-trout/sepolicy/vendor/hal_keymint_optee.te`)
+- [x] init.rc configuration for the HAL service.
 - [ ] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
 - [ ] Populate userspace environment information at start of day, using `kmr_hal::send_hal_info()`.
 

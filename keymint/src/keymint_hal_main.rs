@@ -19,7 +19,7 @@ use kmr_hal::{
     extract_rsp, register_binder_services, send_hal_info, HalServiceError, SerializedChannel,
     ALL_HALS,
 };
-use log::{error, info, warn};
+use log::{error, info};
 use std::{
     ffi::CString,
     ops::DerefMut,
@@ -99,11 +99,7 @@ fn inner_main() -> Result<(), HalServiceError> {
         error!("{panic_info}");
     }));
 
-    if cfg!(feature = "nonsecure") {
-        warn!("Non-secure Trusty KM HAL service is starting.");
-    } else {
-        info!("Trusty KM HAL service is starting.");
-    }
+    info!("OP-TEE KeyMint Rust HAL service is starting.");
 
     info!("Starting thread pool now.");
     binder::ProcessState::start_thread_pool();
@@ -119,9 +115,6 @@ fn inner_main() -> Result<(), HalServiceError> {
             },
         )?;
     let tipc_channel = Arc::new(Mutex::new(TipcChannel(connection)));
-
-    #[cfg(feature = "nonsecure")]
-    kmr_hal_nonsecure::send_boot_info_and_attestation_id_info(&tipc_channel)?;
 
     register_binder_services(&tipc_channel, ALL_HALS, SERVICE_INSTANCE)?;
 
