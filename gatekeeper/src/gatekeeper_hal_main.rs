@@ -25,7 +25,7 @@
 //! system/gatekeeper/rust/README.md.
 
 use gk_hal::channel::SerializedChannel;
-use log::{error, info, warn};
+use log::{error, info};
 use std::fs;
 use std::sync::{mpsc, Arc, Mutex};
 
@@ -70,7 +70,7 @@ fn inner_main() -> Result<(), HalServiceError> {
         error!("{}", panic_info);
     }));
 
-    warn!("Insecure Gatekeeper HAL service is starting.");
+    info!("OP-TEE Gatekeeper Rust HAL service is starting.");
 
     info!("Starting thread pool");
     binder::ProcessState::start_thread_pool();
