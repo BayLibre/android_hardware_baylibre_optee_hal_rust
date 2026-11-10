@@ -1,8 +1,7 @@
-service vendor.keymint-optee-rust /vendor/bin/hw/android.hardware.security.keymint-service.optee.rust \
-                                          --dev ${ro.hardware.trusty_ipc_dev.keymint:-/dev/trusty-ipc-dev0}
+service vendor.keymint-optee-rust /vendor/bin/hw/android.hardware.security.keymint-service.optee.rust
     class early_hal
     user system
-    group system drmrpc
+    group system
     # The keymint service is not allowed to restart.
     # If it crashes, a device restart is required.
     oneshot

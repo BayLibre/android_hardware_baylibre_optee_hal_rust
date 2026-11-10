@@ -35,7 +35,8 @@ requests to the TA as request/response pairs.
 - [x] SELinux policy for the HAL service.
   (`device/epam/aosp-xenvm-trout/sepolicy/vendor/hal_keymint_optee.te`)
 - [x] init.rc configuration for the HAL service.
-- [ ] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
+- [x] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
+  (`libtee_optee_channel` in `vendor/baylibre/optee_ta_rust/optee_channel`)
 - [ ] Populate userspace environment information at start of day, using `kmr_hal::send_hal_info()`.
 
 The Cuttlefish implementation of the [KeyMint/Rust HAL
