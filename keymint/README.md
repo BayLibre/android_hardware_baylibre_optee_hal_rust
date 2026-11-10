@@ -40,6 +40,8 @@ KeyMint Rust TA (dba51a17-0563-11e7-93b1-6fa7b0071a51.ta)
 |------|-------------|
 | `keymint/src/keymint_hal_main.rs` | HAL service |
 | `keymint/Android.bp` | `android.hardware.security.keymint-service.optee.rust` |
+| `keymint/provisioning/src/main.rs` | Tool that provisions the attestation IDs in the TA, once per device |
+| `keymint/provisioning/Android.bp` | `keymint-optee-provision-ids` |
 | `keymint/*.rc`, `keymint/*.xml` | init service and VINTF fragment |
 | `keymint/Checklist.md` | "HAL Service" checklist of `system/keymint/README.md` |
 
@@ -71,11 +73,39 @@ Before registering the binder services, the HAL sends `SetHalInfo` and
 the vendor patch level, from the system properties, and the KeyMint AIDL
 version (4).
 
+The HAL does not send the attestation IDs: the TA reads them from its secure
+storage.
+
+## Attestation ID Provisioning
+
+The attestation IDs are provisioned once per device with
+`keymint-optee-provision-ids set-attestation-ids`, whose command line and
+layout follow the Trusty provisioning tool
+(`system/core/trusty/keymint/provisioning`). Each ID can be given as an option
+(`--brand`, `--device`, `--product`, `--serial`, `--manufacturer`, `--model`,
+`--imei`, `--imei2`, `--meid`). Otherwise, it is read from the same properties
+as VTS (`ro.product.<name>_for_attestation`, then `ro.product.vendor.<name>`,
+then `ro.product.<name>`, and `ro.serialno`), and a missing property is an
+error. The IMEI and MEID are empty unless given (no cellular modem).
+
+The TA stores the IDs and refuses any later provisioning. On a debuggable
+build:
+
+```bash
+adb root
+adb shell keymint-optee-provision-ids set-attestation-ids --dry-run   # print the IDs only
+adb shell keymint-optee-provision-ids set-attestation-ids
+```
+
+Until then, ID attestation fails with `CANNOT_ATTEST_IDS`, and the RKP
+`DeviceInfo` cannot be built.
+
 ## Device Integration
 
 Adding the HAL to the product:
 
 - Add `android.hardware.security.keymint-service.optee.rust` to `PRODUCT_PACKAGES`
+- Add `keymint-optee-provision-ids` to `PRODUCT_PACKAGES`
 - Add SELinux domain of the HAL, with access to `/dev/tee0`
 
 ## Compilation
@@ -85,10 +115,12 @@ The HAL is built by Soong as part of the product. To build it alone:
 ```bash
 source build/envsetup.sh
 lunch <target>
-m android.hardware.security.keymint-service.optee.rust
+m android.hardware.security.keymint-service.optee.rust keymint-optee-provision-ids
 ```
 
-Output: `/vendor/bin/hw/android.hardware.security.keymint-service.optee.rust`
+Outputs:
+- `/vendor/bin/hw/android.hardware.security.keymint-service.optee.rust`
+- `vendor/bin/keymint-optee-provision-ids`
 
 See the TA `README.md` for the TA build details.
 
@@ -127,3 +159,6 @@ VTS: `VtsAidlKeyMintTargetTest`, `VtsAidlSecureClockTargetTest`,
    then, kmr-ta fails every key operation with `HARDWARE_NOT_YET_AVAILABLE`.
    vold then cannot create or unwrap the metadata encryption key, so `/data`
    is not mounted and the device does not boot.
+2. **Attestation IDs**: provisioning is not restricted to the factory: any
+   process with access to `/dev/tee0` can provision a device that has no IDs
+   yet. See the TA `README.md` for the storage limitations.
