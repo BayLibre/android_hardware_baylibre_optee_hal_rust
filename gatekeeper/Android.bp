@@ -25,13 +25,12 @@ rust_binary {
     rustlibs: [
         "libandroid_logger",
         "libbinder_rs",
-        "libgk_hal_with_sharedsecret",
-        "libgk_ta_nonsecure",
+        "libgk_hal",
         "liblog_rust",
+        "librustutils",
+        "libtee_optee_channel",
     ],
+    shared_libs: ["libteec"],
     init_rc: ["android.hardware.gatekeeper-service.optee.rust.rc"],
-    vintf_fragments: [
-        "android.hardware.gatekeeper-service.optee.rust.xml",
-        "android.hardware.security.sharedsecret-gatekeeper.xml",
-    ],
+    vintf_fragments: ["android.hardware.gatekeeper-service.optee.rust.xml"],
 }

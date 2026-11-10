@@ -1,7 +1,3 @@
-on post-fs-data
-    mkdir /data/vendor/gatekeeper 0700 system system
-    mkdir /data/vendor/gatekeeper/nonsecure 0700 system system
-
 service vendor.gatekeeper-optee-rust /vendor/bin/hw/android.hardware.gatekeeper-service.optee.rust
     class hal
     user system
