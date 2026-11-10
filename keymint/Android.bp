@@ -1,0 +1,38 @@
+//
+// Copyright (C) 2026 BayLibre
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+rust_binary {
+    name: "android.hardware.security.keymint-service.optee.rust",
+    relative_install_path: "hw",
+    vendor: true,
+    srcs: ["src/keymint_hal_main.rs"],
+    rustlibs: [
+        "libandroid_logger",
+        "libbinder_rs",
+        "libclap",
+        "libkmr_hal_v4",
+        "libkmr_wire",
+        "liblog_rust",
+        "libtrusty-rs",
+    ],
+    prefer_rlib: true,
+    init_rc: ["android.hardware.security.keymint-service.optee.rust.rc"],
+    vintf_fragments: ["android.hardware.security.keymint-service.optee.rust.xml"],
+    required: ["android.hardware.hardware_keystore_V4.xml"],
+}
