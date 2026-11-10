@@ -31,7 +31,7 @@ returns a response message (as bytes) or an error.
 - [x] SELinux policy for the HAL service.
   (`device/epam/aosp-xenvm-trout/sepolicy/vendor/hal_gatekeeper_optee.te`)
 - [x] init.rc configuration for the HAL service.
-- [ ] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
+- [x] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
 
 The <a
 href="https://cs.android.com/android/platform/superproject/main/+/main:system/core/trusty/gatekeeper/rust/">Trusty-specific
