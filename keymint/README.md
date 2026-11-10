@@ -64,6 +64,13 @@ described in `vendor/baylibre/optee_ta_rust/optee_channel/README.md`.
 Requests are limited to 4000 bytes (`SerializedChannel::MAX_SIZE`, as in the
 Trusty HAL), below the TA limit of 4096 bytes (`KEYMINT_MAX_BUFFER_LENGTH`).
 
+## Startup Sequence
+
+Before registering the binder services, the HAL sends `SetHalInfo` and
+`SetHalVersion` (`kmr_hal::send_hal_info()`): the OS version and patch level and
+the vendor patch level, from the system properties, and the KeyMint AIDL
+version (4).
+
 ## Device Integration
 
 Adding the HAL to the product:
@@ -110,3 +117,13 @@ VTS: `VtsAidlKeyMintTargetTest`, `VtsAidlSecureClockTargetTest`,
   (`vendor/optee/optee_client`): OP-TEE Client API
 - `librustutils`: system properties
 - Android Binder libraries
+
+## Limitations
+
+1. **Boot info**: the HAL does not send the Root of Trust and the boot patch
+   level. The KeyMint TA expects them from the bootloader through a channel
+   that Android cannot subvert ("Bootloader" checklist of
+   `system/keymint/README.md`), which this device does not provide yet. Until
+   then, kmr-ta fails every key operation with `HARDWARE_NOT_YET_AVAILABLE`.
+   vold then cannot create or unwrap the metadata encryption key, so `/data`
+   is not mounted and the device does not boot.
