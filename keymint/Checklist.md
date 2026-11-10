@@ -37,7 +37,7 @@ requests to the TA as request/response pairs.
 - [x] init.rc configuration for the HAL service.
 - [x] Implementation of `SerializedChannel` trait, for reliable HAL <-> TA communication.
   (`libtee_optee_channel` in `vendor/baylibre/optee_ta_rust/optee_channel`)
-- [ ] Populate userspace environment information at start of day, using `kmr_hal::send_hal_info()`.
+- [x] Populate userspace environment information at start of day, using `kmr_hal::send_hal_info()`.
 
 The Cuttlefish implementation of the [KeyMint/Rust HAL
 service](https://cs.android.com/android/platform/superproject/main/+/main:device/google/cuttlefish/guest/hals/keymint/rust/src/keymint_hal_main.rs)

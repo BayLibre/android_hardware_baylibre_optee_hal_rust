@@ -95,12 +95,13 @@ fn inner_main() -> Result<(), HalServiceError> {
     })?;
     let optee_channel = Arc::new(Mutex::new(OpteeChannel(connection)));
 
-    register_binder_services(&optee_channel, ALL_HALS, SERVICE_INSTANCE)?;
-
-    // Send the HAL service information to the TA
+    // Send the HAL service information to the TA, before registering the
+    // services, so that no key is created or used without it.
     send_hal_info(optee_channel.lock().unwrap().deref_mut())
         .map_err(|e| format!("Failed to populate HAL info: {e:?}"))?;
     debug!("HAL info sent to the TA");
+
+    register_binder_services(&optee_channel, ALL_HALS, SERVICE_INSTANCE)?;
 
     info!("Joining thread pool now.");
     binder::ProcessState::join_thread_pool();
