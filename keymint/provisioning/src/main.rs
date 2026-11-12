@@ -21,6 +21,9 @@
 //! (system/core/trusty/keymint/provisioning): each ID can be given as an
 //! option, otherwise it is read from the product properties.
 //!
+//! The IMEIs are empty unless given as options, or read from the telephony
+//! service with --imei-from-telephony.
+//!
 //! Usage: keymint-optee-provision-ids set-attestation-ids [--dry-run] [OPTIONS]
 
 use clap::{Args, Parser, Subcommand};
@@ -90,6 +93,37 @@ struct AttestationIdsArgs {
     /// Set second IMEI (slot 1).
     #[arg(long)]
     imei2: Option<String>,
+
+    /// Read the IMEIs from the telephony
+    #[arg(long)]
+    imei_from_telephony: bool,
+}
+
+/// IMEI of a SIM slot from the telephony service
+/// Empty if the slot has no IMEI.
+fn telephony_imei(slot: u32) -> Result<String, String> {
+    let output = std::process::Command::new("/system/bin/cmd")
+        .args(["phone", "get-imei", &slot.to_string()])
+        .output()
+        .map_err(|e| format!("cannot run cmd phone get-imei {slot}: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("cmd phone get-imei {slot} failed: {}", output.status));
+    }
+    // Output: "Device IMEI: <imei>", or "Device IMEI: null" without an IMEI
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    match stdout.trim().strip_prefix("Device IMEI:").map(str::trim) {
+        Some("null") => Ok(String::new()),
+        Some(imei) if imei.bytes().all(|b| b.is_ascii_digit()) => Ok(imei.to_string()),
+        _ => Err(format!("unexpected output of cmd phone get-imei {slot}: {}", stdout.trim())),
+    }
+}
+
+fn imei_arg(arg: &Option<String>, from_telephony: bool, slot: u32) -> Result<Vec<u8>, String> {
+    match arg {
+        Some(value) => Ok(value.as_bytes().to_vec()),
+        None if from_telephony => telephony_imei(slot).map(String::into_bytes),
+        None => Ok(Vec::new()),
+    }
 }
 
 fn property(name: &str) -> Result<String, String> {
@@ -133,8 +167,8 @@ fn collect_attestation_ids(args: &AttestationIdsArgs) -> Result<AttestationIdInf
         serial: arg_or_prop(&args.serial, || property("ro.serialno"))?,
         manufacturer: arg_or_prop(&args.manufacturer, || product_property("manufacturer"))?,
         model: arg_or_prop(&args.model, || product_property("model"))?,
-        imei: arg_or_default(&args.imei),
-        imei2: arg_or_default(&args.imei2),
+        imei: imei_arg(&args.imei, args.imei_from_telephony, 0)?,
+        imei2: imei_arg(&args.imei2, args.imei_from_telephony, 1)?,
         meid: arg_or_default(&args.meid),
     })
 }

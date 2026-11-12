@@ -92,7 +92,11 @@ layout follow the Trusty provisioning tool
 `--imei`, `--imei2`, `--meid`). Otherwise, it is read from the same properties
 as VTS (`ro.product.<name>_for_attestation`, then `ro.product.vendor.<name>`,
 then `ro.product.<name>`, and `ro.serialno`), and a missing property is an
-error. The IMEI and MEID are empty unless given (no cellular modem).
+error. The IMEI and MEID are empty unless given. With
+`--imei-from-telephony`, the IMEIs not given as options are read from the
+telephony service with `cmd phone get-imei <slot>`, as VTS does: the VTS ID
+attestation tests expect the IMEI that telephony reports, including the one of
+a simulated modem.
 
 The TA stores the IDs and refuses any later provisioning. On a debuggable
 build:
