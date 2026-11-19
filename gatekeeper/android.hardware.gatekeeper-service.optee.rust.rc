@@ -1,0 +1,4 @@
+service vendor.gatekeeper-optee-rust /vendor/bin/hw/android.hardware.gatekeeper-service.optee.rust
+    class hal
+    user system
+    group system

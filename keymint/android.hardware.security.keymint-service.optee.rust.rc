@@ -1,0 +1,7 @@
+service vendor.keymint-optee-rust /vendor/bin/hw/android.hardware.security.keymint-service.optee.rust
+    class early_hal
+    user system
+    group system
+    # The keymint service is not allowed to restart.
+    # If it crashes, a device restart is required.
+    oneshot
